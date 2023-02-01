@@ -1,0 +1,31 @@
+Reverts https://patchwork.kernel.org/project/linux-integrity/patch/20211012124803.11956-1-chenjun102@huawei.com/
+
+The symptom is that during the bootup the tpm_tis probe fails with
+"tpm_tis: probe of MSFT0101:00 failed with error -1".
+
+If we try to modprobe tpm_tis after the boot it loads perfectly fine. This indicates that there could be a race condition somewhere during boot which affects the tpm chip somehow.
+
+It also means that the above patch that we are reverting is not faulty per-say, but that this patch introduced this behaviour to begin with.
+
+I realize that the patch exists for a reason, and if the statement of why the above patch was applied that means that our chip will never receive the TPM_INT_ENAABLE.
+
+However, somehow it still works without the request locality setup.
+diff -u -ru linux-5.18.9.orig/drivers/char/tpm/tpm_tis_core.c linux-5.18.9/drivers/char/tpm/tpm_tis_core.c
+--- linux-5.18.9.orig/drivers/char/tpm/tpm_tis_core.c	2022-07-02 16:44:56.000000000 +0200
++++ linux-5.18.9/drivers/char/tpm/tpm_tis_core.c	2022-07-05 10:38:46.814291828 +0200
+@@ -994,15 +994,7 @@
+ 	intmask |= TPM_INTF_CMD_READY_INT | TPM_INTF_LOCALITY_CHANGE_INT |
+ 		   TPM_INTF_DATA_AVAIL_INT | TPM_INTF_STS_VALID_INT;
+ 	intmask &= ~TPM_GLOBAL_INT_ENABLE;
+-
+-	rc = request_locality(chip, 0);
+-	if (rc < 0) {
+-		rc = -ENODEV;
+-		goto out_err;
+-	}
+-
+ 	tpm_tis_write32(priv, TPM_INT_ENABLE(priv->locality), intmask);
+-	release_locality(chip, 0);
+ 
+ 	rc = tpm_chip_start(chip);
+ 	if (rc)

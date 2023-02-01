@@ -3,24 +3,24 @@
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
-pkgbase=linux-hardened
-pkgver=6.1.7.hardened1
+pkgbase=linux-xps
+pkgver=6.1.7
 pkgrel=1
-pkgdesc='Security-Hardened Linux'
-url='https://github.com/anthraxx/linux-hardened'
+pkgdesc='XPS 9560 Linux Kernel'
 arch=(x86_64)
 license=(GPL2)
 makedepends=(
   bc libelf pahole cpio perl tar xz
-  xmlto python-sphinx python-sphinx_rtd_theme graphviz imagemagick texlive-latexextra
+  xmlto graphviz imagemagick texlive-latexextra
   git
 )
 options=('!strip')
-_srcname=linux-${pkgver%.*}
-_srctag=${pkgver%.*}-${pkgver##*.}
+_srcname=linux-${pkgver}
 source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
-  https://github.com/anthraxx/${pkgbase}/releases/download/${_srctag}/${pkgbase}-${_srctag}.patch{,.sig}
+  https://github.com/anthraxx/linux-hardened/releases/download/${pkgver}-hardened1/linux-hardened-${pkgver}-hardened1.patch{,.sig}
+#  tpm-more-verbose.patch
+ revert-request_locality_before_TPM_INT_ENABLE.patch
   config         # the main kernel config file
 )
 validpgpkeys=(
@@ -32,7 +32,8 @@ sha256sums=('4ab048bad2e7380d3b827f1fad5ad2d2fc4f2e80e1c604d85d1f8781debe600f'
             'SKIP'
             '9d117eafb63b22027e0e8ee5308b11d37f7b8ec7b8c2d52f67a2b98de8aae3c2'
             'SKIP'
-            'd604031cc0963c27c3f0294b072428f0a98e040d732d552fe99cabf572b5a418')
+            '8fe7b6d5a14aa8f7756818ee3862b539f55fd32581255e99b40e3498586b73ec'
+            'bbf2fd33eb8926c18f093d9c9ef42db940b26d2e3a6809065b5b253c50cecdf4')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -60,13 +61,13 @@ prepare() {
   make olddefconfig
   diff -u ../config .config || :
 
-  make -s kernelrelease > version
+  make EXTRAVERSION= -s kernelrelease > version
   echo "Prepared $pkgbase version $(<version)"
 }
 
 build() {
   cd $_srcname
-  make htmldocs all
+  make EXTRAVERSION= all
 }
 
 _package() {
@@ -179,26 +180,7 @@ _package-headers() {
   ln -sr "$builddir" "$pkgdir/usr/src/$pkgbase"
 }
 
-_package-docs() {
-  pkgdesc="Documentation for the $pkgdesc kernel"
-
-  cd $_srcname
-  local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
-
-  echo "Installing documentation..."
-  local src dst
-  while read -rd '' src; do
-    dst="${src#Documentation/}"
-    dst="$builddir/Documentation/${dst#output/}"
-    install -Dm644 "$src" "$dst"
-  done < <(find Documentation -name '.*' -prune -o ! -type d -print0)
-
-  echo "Adding symlink..."
-  mkdir -p "$pkgdir/usr/share/doc"
-  ln -sr "$builddir/Documentation" "$pkgdir/usr/share/doc/$pkgbase"
-}
-
-pkgname=("$pkgbase" "$pkgbase-headers" "$pkgbase-docs")
+pkgname=("$pkgbase" "$pkgbase-headers")
 for _p in "${pkgname[@]}"; do
   eval "package_$_p() {
     $(declare -f "_package${_p#$pkgbase}")
