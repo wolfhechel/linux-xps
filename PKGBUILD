@@ -5,7 +5,7 @@
 
 pkgbase=linux-xps
 pkgver=6.1.7
-pkgrel=1
+pkgrel=2
 pkgdesc='XPS 9560 Linux Kernel'
 arch=(x86_64)
 license=(GPL2)
@@ -19,7 +19,6 @@ _srcname=linux-${pkgver}
 source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   https://github.com/anthraxx/linux-hardened/releases/download/${pkgver}-hardened1/linux-hardened-${pkgver}-hardened1.patch{,.sig}
-#  tpm-more-verbose.patch
  revert-request_locality_before_TPM_INT_ENABLE.patch
   config         # the main kernel config file
 )
@@ -33,7 +32,7 @@ sha256sums=('4ab048bad2e7380d3b827f1fad5ad2d2fc4f2e80e1c604d85d1f8781debe600f'
             '9d117eafb63b22027e0e8ee5308b11d37f7b8ec7b8c2d52f67a2b98de8aae3c2'
             'SKIP'
             '8fe7b6d5a14aa8f7756818ee3862b539f55fd32581255e99b40e3498586b73ec'
-            'bbf2fd33eb8926c18f093d9c9ef42db940b26d2e3a6809065b5b253c50cecdf4')
+            'af422e0af3ac17c0ae593da4e3b11e9523fefa4efb6bfb23c60c7c710b9dfedc')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -178,6 +177,11 @@ _package-headers() {
   echo "Adding symlink..."
   mkdir -p "$pkgdir/usr/src"
   ln -sr "$builddir" "$pkgdir/usr/src/$pkgbase"
+
+  echo "Adding signing keys..."
+  mkdir -p "$pkgdir/var/lib/dkms"
+  install -m 600 certs/signing_key.pem "$pkgdir/var/lib/dkms"
+  install -m 644 certs/signing_key.x509 "$pkgdir/var/lib/dkms"
 }
 
 pkgname=("$pkgbase" "$pkgbase-headers")
